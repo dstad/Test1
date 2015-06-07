@@ -35,8 +35,8 @@ const int pumpPin = 3;
 const float sensorScale = 0.250;  // This is a max Heart Rate of 255 when scaled to the max 5 volt analog input from the pot
 const int millisPerMin = 60000; // The number of milliseconds per minute for HR calculations
 const int pulseOnWidth = 25;  // 100 miliseconds on time for the pump when in pulse mode
-int upperLimitPin = 4;      // switch for the upper level limit
-int lowerLimitPin = 6;      // switch for the lower level limit
+int upperlimitPin = 4;      // switch for the upper level limit
+int lowerlimitPin = 6;      // switch for the lower level limit
 int systemStatePin = 7;     // Use HIGH for HEARTBEAT mode and LOW for CONSTANTRUN mode
 int llpinVal = 1;			// set the default to HIGH or pulled up
 int ulpinVal = 1;			// set the default to HIGH or pulled up
@@ -116,7 +116,7 @@ void loop() {
   }
   else
   {
-      debugerrln("Error in System State")
+      debugerrln("Error in System State");
   }
   
   
