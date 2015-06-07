@@ -49,10 +49,10 @@ long lastTimeCheck = 0;     // Using to keep track of # of milliseconds that hav
 long currentTimeCheck = 0;  // This will hold the current time on each pass so we can trigger certain things with lastTimeCheck
 int timeDiff = 0;           // keeping track of the time differences
 boolean pumpPulseOn = false; // keep track of on or off pulsing the pump while pump running is true
-long nextTimeCheck = 0;
-int nextTransition = LOW;
-int pulseOffWidth = 0;
-boolean checkSensor = false;
+long nextTimeCheck = 0;      // Set to the next time interval of significance (rise of fall of the pulse wave)
+int nextTransition = LOW;    // Set to the next transition of the pump motor is it turning off-LOW, or turning on-HIGH
+int pulseOffWidth = 0;       // The length of the pulse off phase of the pump, based on Heart Rate calculations
+boolean checkSensor = false; // used to indicate if we need to check the sensor or not.  Start with false
 
 
 
@@ -62,34 +62,35 @@ Bounce debouncer = Bounce();
 // the setup() method runs once, when the sketch starts
 
 void setup() {
-  // initialize the digital pin as an output.
+  // initialize the digital pin as input or output as required
   pinMode(ledPin, OUTPUT);
   pinMode(pumpPin, OUTPUT);
   pinMode(upperlimitPin, INPUT_PULLUP);
   pinMode(lowerlimitPin, INPUT_PULLUP);
 
   // read the value from the Potentiometer
+  // sensorCheck was initialized false because we do read the value at the setup phase
   sensorValue = analogRead(sensorPin);    
 
   // After setting up the button, setup the Bounce instance :
   //debouncer.attach(upperlimitPin);
   debouncer.attach(lowerlimitPin);
   
-  debouncer.interval(5); // interval in ms
+  debouncer.interval(5); // interval in ms - how long do you wait for a bounce to stabilize 
   
-  Serial.begin(9600); // USB is always 12 Mbit/sec
+  Serial.begin(9600); // USB is always 12 Mbit/sec, NEED TO PUT THIS IN A DEFINE SO WE DON"T DO IF NOT NEEDED 
+  
   digitalWrite(upperlimitPin, HIGH);  // force the switches high to activate the pull up resistor
   digitalWrite(lowerlimitPin, HIGH);  // force the switches high to activate the pull up resistor
 }
 
-// the loop() methor runs over and over again,
-// as long as the board has power
 
 void loop() {
   // Update the Bounce instance
   debouncer.update();
   
   // Get the updated value from the debounced switch
+  // We need to add in the upper limit switch also (future effort)
   llpinVal = debouncer.read();
   
   // Get a timecheck for the heart rate pulsing
@@ -128,9 +129,12 @@ void loop() {
          nextTimeCheck = pulseOnWidth;
         }
     }    
+	// if the llpinVal is HIGH it means the switch has not be activated
+    // so the pump should be running or turned on for the first time
     if(llpinVal == HIGH)
     {
-      // don't check the sensor value while we are in the beeting loop
+      // don't check the sensor value while we are in the beating loop
+	  // we need to fix so that we can check the sensor while in the beating loop
       checkSensor = false;
       if (timeDiff >= nextTimeCheck)
       {
@@ -145,8 +149,8 @@ void loop() {
           lastTimeCheck = currentTimeCheck;
           analogWrite(pumpPin, pumpSpeed);
           digitalWrite(ledPin, HIGH);
-          nextTransition = LOW;
-          nextTimeCheck = pulseOnWidth;
+          nextTransition = LOW;  // Pump is in the on mode so next is to go off-LOW
+          nextTimeCheck = pulseOnWidth;  // pulseOnWidth determined in the sensor check with HR
         }
         else if (nextTransition == LOW)
         {
