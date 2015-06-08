@@ -29,9 +29,6 @@
 #define HEARTBEAT        1;
 #define CONSTANTRUN      2;
 
-just going to add some lines
-here so that it will not compile.  
-Will commit this change and then revert it back out.
 
 const int ledPin = 13;
 const int pumpPin = 3;
