@@ -25,10 +25,6 @@
 #define debuglnerr(x)
 #endif
 
-#define PREINITIALIZE    0;
-#define HEARTBEAT        1;
-#define CONSTANTRUN      2;
-
 
 const int ledPin = 13;
 const int pumpPin = 3;
@@ -37,10 +33,8 @@ const int millisPerMin = 60000; // The number of milliseconds per minute for HR 
 const int pulseOnWidth = 25;  // 100 miliseconds on time for the pump when in pulse mode
 int upperlimitPin = 4;      // switch for the upper level limit
 int lowerlimitPin = 6;      // switch for the lower level limit
-int systemStatePin = 7;     // Use HIGH for HEARTBEAT mode and LOW for CONSTANTRUN mode
-int llpinVal = 1;			// set the default to HIGH or pulled up
-int ulpinVal = 1;			// set the default to HIGH or pulled up
-int systemStatePinVal = HIGH; // set the default to HIGH or pulled up
+int llpinVal = 1;
+int ulpinVal = 1;
 int delaySize = 2000;       //used to increment the amount of delay on the LED
 int count = 0;              //used for the for loop count
 int pumpSpeed = 0;         // used for the output speed of the pump
@@ -55,11 +49,10 @@ long lastTimeCheck = 0;     // Using to keep track of # of milliseconds that hav
 long currentTimeCheck = 0;  // This will hold the current time on each pass so we can trigger certain things with lastTimeCheck
 int timeDiff = 0;           // keeping track of the time differences
 boolean pumpPulseOn = false; // keep track of on or off pulsing the pump while pump running is true
-long nextTimeCheck = 0;      // Set to the next time interval of significance (rise of fall of the pulse wave)
-int nextTransition = LOW;    // Set to the next transition of the pump motor is it turning off-LOW, or turning on-HIGH
-int pulseOffWidth = 0;       // The length of the pulse off phase of the pump, based on Heart Rate calculations
-boolean checkSensor = false; // used to indicate if we need to check the sensor or not.  Start with false
-int systemState = 0;         // systemState used to control loop functions 0-pre-initialize, 1-heart beat (default), 2-constant run
+long nextTimeCheck = 0;
+int nextTransition = LOW;
+int pulseOffWidth = 0;
+boolean checkSensor = false;
 
 
 
@@ -74,23 +67,19 @@ void setup() {
   pinMode(pumpPin, OUTPUT);
   pinMode(upperlimitPin, INPUT_PULLUP);
   pinMode(lowerlimitPin, INPUT_PULLUP);
-  pinMode(systemStatePin, INPUT_PULLUP);
 
   // read the value from the Potentiometer
   sensorValue = analogRead(sensorPin);    
-  lastSensorValue = sensorValue;  // First read is the last read as well
 
-  // After setting up the button, setup the Bounce instances :
+  // After setting up the button, setup the Bounce instance :
   //debouncer.attach(upperlimitPin);
   debouncer.attach(lowerlimitPin);
-  debouncer.attach(systemStatePin);
   
   debouncer.interval(5); // interval in ms
   
   Serial.begin(9600); // USB is always 12 Mbit/sec
   digitalWrite(upperlimitPin, HIGH);  // force the switches high to activate the pull up resistor
   digitalWrite(lowerlimitPin, HIGH);  // force the switches high to activate the pull up resistor
-  digitalWrite(systemStatePin, HIGH);  // force the switches high to activate the pull up resistor
 }
 
 // the loop() methor runs over and over again,
@@ -102,22 +91,6 @@ void loop() {
   
   // Get the updated value from the debounced switch
   llpinVal = debouncer.read();
-  systemStatePinVal = debouncer.read();
-  
-  // change the system state based on the system switch value HIGH or LOW
-  if (systemStatePinVal == HIGH)
-  {
-      systemState = 1;  // Heart Beat mode
-  }
-  else if (systemStatePinVal == LOW)
-  {
-      systemState = 2;  // Constant Run mode
-  }
-  else
-  {
-      debugerrln("Error in System State");
-  }
-  
   
   // Get a timecheck for the heart rate pulsing
   currentTimeCheck = millis();
