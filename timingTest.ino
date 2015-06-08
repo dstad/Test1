@@ -69,7 +69,7 @@ Bounce debouncer = Bounce();
 // the setup() method runs once, when the sketch starts
 
 void setup() {
-  // initialize the digital pin as input or output as required
+  // initialize the digital pin as an output.
   pinMode(ledPin, OUTPUT);
   pinMode(pumpPin, OUTPUT);
   pinMode(upperlimitPin, INPUT_PULLUP);
@@ -77,7 +77,6 @@ void setup() {
   pinMode(systemStatePin, INPUT_PULLUP);
 
   // read the value from the Potentiometer
-  // sensorCheck was initialized false because we do read the value at the setup phase
   sensorValue = analogRead(sensorPin);    
   lastSensorValue = sensorValue;  // First read is the last read as well
 
@@ -86,22 +85,22 @@ void setup() {
   debouncer.attach(lowerlimitPin);
   debouncer.attach(systemStatePin);
   
-  debouncer.interval(5); // interval in ms - how long do you wait for a bounce to stabilize 
+  debouncer.interval(5); // interval in ms
   
-  Serial.begin(9600); // USB is always 12 Mbit/sec, NEED TO PUT THIS IN A DEFINE SO WE DON"T DO IF NOT NEEDED 
-  
+  Serial.begin(9600); // USB is always 12 Mbit/sec
   digitalWrite(upperlimitPin, HIGH);  // force the switches high to activate the pull up resistor
   digitalWrite(lowerlimitPin, HIGH);  // force the switches high to activate the pull up resistor
   digitalWrite(systemStatePin, HIGH);  // force the switches high to activate the pull up resistor
 }
 
+// the loop() methor runs over and over again,
+// as long as the board has power
 
 void loop() {
   // Update the Bounce instance
   debouncer.update();
   
   // Get the updated value from the debounced switch
-  // We need to add in the upper limit switch also (future effort)
   llpinVal = debouncer.read();
   systemStatePinVal = debouncer.read();
   
@@ -156,12 +155,9 @@ void loop() {
          nextTimeCheck = pulseOnWidth;
         }
     }    
-	// if the llpinVal is HIGH it means the switch has not be activated
-    // so the pump should be running or turned on for the first time
     if(llpinVal == HIGH)
     {
-      // don't check the sensor value while we are in the beating loop
-	  // we need to fix so that we can check the sensor while in the beating loop
+      // don't check the sensor value while we are in the beeting loop
       checkSensor = false;
       if (timeDiff >= nextTimeCheck)
       {
@@ -176,8 +172,8 @@ void loop() {
           lastTimeCheck = currentTimeCheck;
           analogWrite(pumpPin, pumpSpeed);
           digitalWrite(ledPin, HIGH);
-          nextTransition = LOW;  // Pump is in the on mode so next is to go off-LOW
-          nextTimeCheck = pulseOnWidth;  // pulseOnWidth determined in the sensor check with HR
+          nextTransition = LOW;
+          nextTimeCheck = pulseOnWidth;
         }
         else if (nextTransition == LOW)
         {
