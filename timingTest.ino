@@ -25,9 +25,9 @@
 #define debuglnerr(x)
 #endif
 
-#define PREINITIALIZE    0;
-#define HEARTBEAT        1;
-#define CONSTANTRUN      2;
+#define PREINITIALIZE    0
+#define HEARTBEAT        1
+#define CONSTANTRUN      2
 
 
 const int ledPin = 13;
@@ -63,8 +63,9 @@ int systemState = 0;         // systemState used to control loop functions 0-pre
 
 
 
-// Instantiate a Bounce object
-Bounce debouncer = Bounce(); 
+// Instantiate Bounce objects
+Bounce debouncer1 = Bounce(); 
+Bounce debouncer2 = Bounce(); 
 
 // the setup() method runs once, when the sketch starts
 
@@ -78,15 +79,17 @@ void setup() {
 
   // read the value from the Potentiometer
   // sensorCheck was initialized false because we do read the value at the setup phase
-  sensorValue = analogRead(sensorPin);    
-  lastSensorValue = sensorValue;  // First read is the last read as well
+  // sensorValue = analogRead(sensorPin);    
+  // lastSensorValue = sensorValue;  // First read is the last read as well
+  sensorCheck = true;             // check the sensor on the first pass in the loop to set the heart rate
 
   // After setting up the button, setup the Bounce instances :
   //debouncer.attach(upperlimitPin);
-  debouncer.attach(lowerlimitPin);
-  debouncer.attach(systemStatePin);
+  debouncer1.attach(lowerlimitPin);
+  debouncer2.attach(systemStatePin);
   
-  debouncer.interval(5); // interval in ms - how long do you wait for a bounce to stabilize 
+  debouncer1.interval(5); // interval in ms - how long do you wait for a bounce to stabilize 
+  debouncer2.interval(5); // interval in ms - how long do you wait for a bounce to stabilize 
   
   Serial.begin(9600); // USB is always 12 Mbit/sec, NEED TO PUT THIS IN A DEFINE SO WE DON"T DO IF NOT NEEDED 
   
@@ -98,21 +101,22 @@ void setup() {
 
 void loop() {
   // Update the Bounce instance
-  debouncer.update();
+  debouncer1.update();
+  debouncer2.update();
   
   // Get the updated value from the debounced switch
   // We need to add in the upper limit switch also (future effort)
-  llpinVal = debouncer.read();
-  systemStatePinVal = debouncer.read();
+  llpinVal = debouncer1.read();
+  systemStatePinVal = debouncer2.read();
   
   // change the system state based on the system switch value HIGH or LOW
   if (systemStatePinVal == HIGH)
   {
-      systemState = 1;  // Heart Beat mode
+      systemState = HEARTBEAT;  // Heart Beat mode
   }
   else if (systemStatePinVal == LOW)
   {
-      systemState = 2;  // Constant Run mode
+      systemState = CONSTANTRUN;  // Constant Run mode
   }
   else
   {
@@ -125,93 +129,112 @@ void loop() {
   timeDiff = currentTimeCheck - lastTimeCheck;
 
   
-    if(checkSensor == true)
-    {
-      // read the value from the Potentiometer
-      sensorValue = analogRead(sensorPin);    
+    // read the value from the Potentiometer
+    sensorValue = analogRead(sensorPin);    
 
-      // Check for a change in the value from the Pot that is significant enough to use
-      sensorCheck = sensorValue - lastSensorValue;
-      if (abs(sensorCheck) >= 16)
-      {
-         debug("Sensor check is: ");
-         debug(sensorValue);
-         debug("    ");
-         debug(lastSensorValue);
-         debug("    ");
-         debugln(sensorCheck);
-              
-         // Set the last read to the new value
-         lastSensorValue = sensorValue;
-              
-         // Determine the new rate that should be applied
-         hrValue = sensorScale * sensorValue;
-         hrInMS = millisPerMin / hrValue;
-         pulseOffWidth = hrInMS - pulseOnWidth;
-         debug("Heart Rate set to ");
-         debug(hrValue);
-         debug(" BPM And ");
-         debug(pulseOffWidth);
-         debugln(" For millisecond pulse");
-         nextTimeCheck = pulseOnWidth;
-        }
-    }    
-	// if the llpinVal is HIGH it means the switch has not be activated
-    // so the pump should be running or turned on for the first time
-    if(llpinVal == HIGH)
+    // Check for a change in the value from the Pot that is significant enough to use
+    sensorCheck = sensorValue - lastSensorValue;
+    if (abs(sensorCheck) >= 16)
     {
-      // don't check the sensor value while we are in the beating loop
-	  // we need to fix so that we can check the sensor while in the beating loop
-      checkSensor = false;
-      if (timeDiff >= nextTimeCheck)
-      {
-        // The next "if" only occurs if the pump is off and needs to be started
-        if (nextTransition == HIGH)
-        {
-          debugln("Motor on");
-          pumpSpeed = 255;  // Get the pump spinning 
-          pumpRunning = 1;  // pump is on
-          // The pump just turned on so set the last time check to now
-          currentTimeCheck = millis();
-          lastTimeCheck = currentTimeCheck;
-          analogWrite(pumpPin, pumpSpeed);
-          digitalWrite(ledPin, HIGH);
-          nextTransition = LOW;  // Pump is in the on mode so next is to go off-LOW
-          nextTimeCheck = pulseOnWidth;  // pulseOnWidth determined in the sensor check with HR
-        }
-        else if (nextTransition == LOW)
-        {
-          debugln("Motor Shut Off");
-          pumpSpeed = 0;
-          pumpRunning = 0;
-          pumpPulseOn = false;
-          currentTimeCheck = millis();
-          lastTimeCheck = currentTimeCheck;
-          analogWrite(pumpPin, pumpSpeed);
-          digitalWrite(ledPin, LOW);
-          nextTransition = HIGH;
-          nextTimeCheck = pulseOffWidth;
-        }
-        else
-        {
-          debugerrln("Error Occured");
-        }
-      }
+       debug("Sensor check is: ");
+       debug(sensorValue);
+       debug("    ");
+       debug(lastSensorValue);
+       debug("    ");
+       debugln(sensorCheck);
+            
+       // Set the last read to the new value
+       lastSensorValue = sensorValue;
+            
+       // Determine the new rate that should be applied
+       hrValue = sensorScale * sensorValue;
+       hrInMS = millisPerMin / hrValue;
+       pulseOffWidth = hrInMS - pulseOnWidth;
+       debug("Heart Rate set to ");
+       debug(hrValue);
+       debug(" BPM And ");
+       debug(pulseOffWidth);
+       debugln(" For millisecond pulse");
+       nextTimeCheck = pulseOnWidth;
+    }
+	
+	if (systemState == HEARTBEAT)
+	{
+            // if the llpinVal is HIGH it means the switch has not been activated
+	    // so the pump should be running or turned on for the first time
+	    if(llpinVal == HIGH)
+	    {
+	      // don't check the sensor value while we are in the beating loop
+	      // we need to fix so that we can check the sensor while in the beating loop
+	      //checkSensor = false;
+	      if (timeDiff >= nextTimeCheck)
+	      {
+	           // The next "if" only occurs if the pump is off and needs to be started
+		      if (nextTransition == HIGH)
+		      {
+				 debugln("Motor on");
+				 pumpSpeed = 255;  // Get the pump spinning 
+				 pumpRunning = 1;  // pump is on
+				 // The pump just turned on so set the last time check to now
+				 currentTimeCheck = millis();
+				 lastTimeCheck = currentTimeCheck;
+				 analogWrite(pumpPin, pumpSpeed);
+				 digitalWrite(ledPin, HIGH);
+				 nextTransition = LOW;  // Pump is in the on mode so next is to go off-LOW
+				 nextTimeCheck = pulseOnWidth;  // pulseOnWidth determined in the sensor check with HR
+		      }
+		      else if (nextTransition == LOW)
+		      {
+		         debugln("Motor Shut Off");
+		         pumpSpeed = 0;
+		         pumpRunning = 0;
+		         pumpPulseOn = false;
+		         currentTimeCheck = millis();
+				 lastTimeCheck = currentTimeCheck;
+				 analogWrite(pumpPin, pumpSpeed);
+				 digitalWrite(ledPin, LOW);
+				 nextTransition = HIGH;
+				 nextTimeCheck = pulseOffWidth;
+		      }
+		      else
+		      {
+		         debugerrln("Error Occured");
+		      }
+           }
 
+	    }
+	    else
+	    {
+	        pumpSpeed = 0;
+			analogWrite(pumpPin, pumpSpeed);
+			digitalWrite(ledPin, LOW);
+			// Look at the Pots value and normalize for a heart rate
+			// 0 is the min and 1023 is the max
+			hrValue = int(sensorScale * sensorValue);
+			hrInMS = millisPerMin / hrValue;
+			// ok to check the sensor now
+			//checkSensor = true;
+	    }
     }
-    else
+    else if (systemState == CONSTANTRUN)
     {
-      pumpSpeed = 0;
-      analogWrite(pumpPin, pumpSpeed);
-      digitalWrite(ledPin, LOW);
-      // Look at the Pots value and normalize for a heart rate
-      // 0 is the min and 1023 is the max
-      hrValue = int(sensorScale * sensorValue);
-      hrInMS = millisPerMin / hrValue;
-      // ok to check the sensor now
-      checkSensor = true;
-    }
-      
+	    if (llpinVal == HIGH)
+        {	
+	       pumpSpeed = 175;
+	       analogWrite(pumpPin, pumpSpeed);
+	       digitalWrite(ledPin, HIGH);
+	    }
+	    else if (llpinVal == LOW)
+	    {
+	       pumpSpeed = 0;
+	       analogWrite(pumpPin, pumpSpeed);
+	       digitalWrite(ledPin, LOW);
+	    }
+	    else
+	    {
+		    debugerrln("Error in CONSTANTRUN mode");
+	    }
+    }	
 }
 
 
