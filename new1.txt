@@ -1,3 +1,4 @@
 test 1
 All Your Base Are Belong To Us
 this is a test to see how pull requests work
+merge conflict test
